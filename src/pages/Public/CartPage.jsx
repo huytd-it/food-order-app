@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
@@ -6,26 +6,45 @@ import {
   TrashIcon, 
   PlusIcon, 
   MinusIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const CartPage = () => {
   const { 
-    items, 
+    cartItems, 
     total, 
     removeFromCart, 
     updateQuantity, 
-    clearCart 
+    clearCart,
+    isLoading: cartLoading,
+    error: cartError
   } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleQuantityChange = (itemId, newQuantity) => {
-    if (newQuantity < 1) {
-      removeFromCart(itemId);
-    } else {
-      updateQuantity(itemId, newQuantity);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleQuantityChange = async (itemId, newQuantity) => {
+    try {
+      setError(null);
+      if (newQuantity < 1) {
+        await removeFromCart(itemId);
+      } else {
+        await updateQuantity(itemId, newQuantity);
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      setError(error.message);
     }
   };
 
@@ -35,8 +54,6 @@ const CartPage = () => {
       return;
     }
     setIsCheckingOut(true);
-    // Here you would typically handle the checkout process
-    // For now, we'll just simulate a successful checkout
     setTimeout(() => {
       clearCart();
       setIsCheckingOut(false);
@@ -44,7 +61,39 @@ const CartPage = () => {
     }, 2000);
   };
 
-  if (items.length === 0) {
+  if (isLoading || cartLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (cartError) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-500" />
+            <h2 className="mt-2 text-3xl font-bold text-gray-900">Error Loading Cart</h2>
+            <p className="mt-2 text-lg text-gray-600">{cartError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cartItems || cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,6 +127,12 @@ const CartPage = () => {
           </button>
         </div>
 
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <p>{error}</p>
+          </div>
+        )}
+
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6">
             <h2 className="text-2xl font-bold text-gray-900">Shopping Cart</h2>
@@ -85,7 +140,7 @@ const CartPage = () => {
 
           <div className="border-t border-gray-200">
             <ul className="divide-y divide-gray-200">
-              {items.map((item) => (
+              {cartItems.map((item) => (
                 <li key={item.id} className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -103,14 +158,15 @@ const CartPage = () => {
                       <div className="flex items-center border rounded-md">
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                          className="p-2 text-gray-600 hover:text-gray-900"
+                          className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={item.quantity <= 1}
                         >
                           <MinusIcon className="h-4 w-4" />
                         </button>
                         <span className="px-4 py-2 text-gray-900">{item.quantity}</span>
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          className="p-2 text-gray-600 hover:text-gray-900"
+                          className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <PlusIcon className="h-4 w-4" />
                         </button>
@@ -139,7 +195,7 @@ const CartPage = () => {
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Order Summary</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {items.length} {items.length === 1 ? 'item' : 'items'} in your cart
+                  {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
                 </p>
               </div>
               <div className="text-right">
