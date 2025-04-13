@@ -10,10 +10,22 @@ const AddToCartButton = ({ item }) => {
   const handleAddToCart = async () => {
     try {
       setIsAdding(true);
-      await addToCart({ ...item, quantity });
+      // Ensure we're passing all necessary item properties
+      const cartItem = {
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        description: item.description,
+        category: item.category,
+        quantity: quantity
+      };
+      await addToCart(cartItem);
+      // Reset quantity after successful add
       setQuantity(1);
     } catch (error) {
       console.error('Error adding to cart:', error);
+      // You might want to show a toast notification here
     } finally {
       setIsAdding(false);
     }
@@ -29,10 +41,10 @@ const AddToCartButton = ({ item }) => {
 
   return (
     <div className="flex items-center space-x-2">
-      <div className="flex items-center border rounded-full">
+      <div className="flex items-center border rounded-md">
         <button
           onClick={decrementQuantity}
-          className="p-1 text-gray-600 hover:text-primary"
+          className="p-1 text-gray-600 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={quantity <= 1}
         >
           <MinusIcon className="h-4 w-4" />
@@ -40,7 +52,7 @@ const AddToCartButton = ({ item }) => {
         <span className="px-2 text-sm font-medium">{quantity}</span>
         <button
           onClick={incrementQuantity}
-          className="p-1 text-gray-600 hover:text-primary"
+          className="p-1 text-gray-600 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={quantity >= 10}
         >
           <PlusIcon className="h-4 w-4" />
@@ -49,8 +61,10 @@ const AddToCartButton = ({ item }) => {
       <button
         onClick={handleAddToCart}
         disabled={isAdding}
-        className={`flex-1 bg-primary text-white px-4 py-2 rounded-full text-sm hover:bg-primary-dark transition-colors duration-200 ${
-          isAdding ? 'opacity-75 cursor-not-allowed' : ''
+        className={`px-3 py-1 text-sm font-medium rounded-md ${
+          isAdding
+            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+            : 'bg-primary text-white hover:bg-primary-dark'
         }`}
       >
         {isAdding ? 'Adding...' : 'Add to Cart'}
