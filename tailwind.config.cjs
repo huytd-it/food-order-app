@@ -10,7 +10,7 @@ module.exports = {
         primary: {
           DEFAULT: '#FF6B6B',
           light: '#FF8E8E',
-          dark: '#FF5252',
+          dark: '#FF4B4B',
         },
         secondary: {
           DEFAULT: '#4ECDC4',
@@ -19,8 +19,8 @@ module.exports = {
         },
         accent: {
           DEFAULT: '#FFE66D',
-          light: '#FFED8A',
-          dark: '#FFE14A',
+          light: '#FFEE9D',
+          dark: '#FFDE3D',
         },
       },
     },
