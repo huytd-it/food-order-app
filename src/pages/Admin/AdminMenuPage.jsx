@@ -4,6 +4,7 @@ import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../../firebaseConfig';
 import { UploadOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { auth } from '../../firebaseConfig';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -16,6 +17,7 @@ const AdminMenuPage = () => {
   const [form] = Form.useForm();
   const [imageFile, setImageFile] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const columns = [
     {
@@ -122,8 +124,14 @@ const AdminMenuPage = () => {
     try {
       const menu = menus.find(m => m.id === menuId);
       if (menu.imageUrl) {
-        const imageRef = ref(storage, menu.imageUrl);
-        await deleteObject(imageRef);
+        try {
+          const imagePath = menu.imageUrl.split('/o/')[1].split('?')[0];
+          const decodedPath = decodeURIComponent(imagePath);
+          const imageRef = ref(storage, decodedPath);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.error('Error deleting image:', error);
+        }
       }
       await deleteDoc(doc(db, 'menus', menuId));
       message.success('Menu item deleted successfully');
@@ -136,13 +144,30 @@ const AdminMenuPage = () => {
 
   const handleImageUpload = async (file) => {
     try {
-      const storageRef = ref(storage, `menus/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      setUploading(true);
+      const timestamp = Date.now();
+      const filename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      
+      const storageRef = ref(storage, `menus/${filename}`);
+      
+      const metadata = {
+        contentType: file.type,
+        customMetadata: {
+          uploadedBy: auth.currentUser?.uid || 'unknown',
+          uploadedAt: new Date().toISOString()
+        }
+      };
+      
+      const snapshot = await uploadBytes(storageRef, file, metadata);
+      
+      const url = await getDownloadURL(snapshot.ref);
+      
       setImageUrl(url);
+      setUploading(false);
       return url;
     } catch (error) {
-      message.error('Failed to upload image');
+      setUploading(false);
+      message.error('Failed to upload image: ' + error.message);
       console.error('Error uploading image:', error);
       return null;
     }
@@ -158,6 +183,12 @@ const AdminMenuPage = () => {
       };
 
       if (selectedMenu) {
+        if (selectedMenu.imageUrl && selectedMenu.imageUrl !== imageUrl) {
+          const oldImagePath = selectedMenu.imageUrl.split('/o/')[1].split('?')[0];
+          const decodedPath = decodeURIComponent(oldImagePath);
+          const oldImageRef = ref(storage, decodedPath);
+          await deleteObject(oldImageRef);
+        }
         await updateDoc(doc(db, 'menus', selectedMenu.id), menuData);
         message.success('Menu item updated successfully');
       } else {
@@ -271,13 +302,31 @@ const AdminMenuPage = () => {
           <Form.Item label="Image">
             <Upload
               beforeUpload={(file) => {
+                const isImage = file.type.startsWith('image/');
+                if (!isImage) {
+                  message.error('You can only upload image files!');
+                  return false;
+                }
+                const isLt5M = file.size / 1024 / 1024 < 5;
+                if (!isLt5M) {
+                  message.error('Image must be smaller than 5MB!');
+                  return false;
+                }
                 setImageFile(file);
                 handleImageUpload(file);
                 return false;
               }}
               showUploadList={false}
+              accept="image/*"
+              maxCount={1}
             >
-              <Button icon={<UploadOutlined />}>Upload Image</Button>
+              <Button 
+                icon={<UploadOutlined />} 
+                loading={uploading}
+                disabled={uploading}
+              >
+                {uploading ? 'Uploading...' : 'Upload Image'}
+              </Button>
             </Upload>
             {imageUrl && (
               <div className="mt-4">
@@ -285,7 +334,19 @@ const AdminMenuPage = () => {
                   width={200}
                   src={imageUrl}
                   alt="Menu item"
+                  style={{ objectFit: 'cover' }}
+                  preview={false}
                 />
+                <Button 
+                  danger 
+                  className="mt-2"
+                  onClick={() => {
+                    setImageUrl('');
+                    setImageFile(null);
+                  }}
+                >
+                  Remove Image
+                </Button>
               </div>
             )}
           </Form.Item>
