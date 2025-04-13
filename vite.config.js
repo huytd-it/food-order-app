@@ -27,5 +27,5 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  base: '/food-order-app/', // Replace with your repository name
+
 }) 
