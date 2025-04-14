@@ -1,14 +1,18 @@
 export const sizeOptions = [
-  { id: 'small', name: 'Small', price: 0 },
-  { id: 'medium', name: 'Medium', price: 2 },
-  { id: 'large', name: 'Large', price: 4 }
+  { id: 'small', name: 'Nhỏ', price: 0 },
+  { id: 'medium', name: 'Vừa', price: 10000 },
+  { id: 'large', name: 'Lớn', price: 20000 }
 ];
 
 export const toppingOptions = [
-  { id: 'extra-cheese', name: 'Extra Cheese', price: 1 },
-  { id: 'pepperoni', name: 'Pepperoni', price: 2 },
-  { id: 'mushrooms', name: 'Mushrooms', price: 1 },
-  { id: 'onions', name: 'Onions', price: 0.5 }
+  { id: 'rau-thom', name: 'Rau thơm', price: 5000 },
+  { id: 'hanh-kho', name: 'Hành khô', price: 5000 },
+  { id: 'ot', name: 'Ớt', price: 5000 },
+  { id: 'chanh', name: 'Chanh', price: 5000 },
+  { id: 'tuong-ot', name: 'Tương ớt', price: 5000 },
+  { id: 'tuong-dau', name: 'Tương đậu', price: 5000 },
+  { id: 'nuoc-mam', name: 'Nước mắm', price: 5000 },
+  { id: 'gia-vi', name: 'Gia vị', price: 5000 }
 ];
 
 export const badgeStyles = {
