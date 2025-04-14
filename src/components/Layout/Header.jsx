@@ -1,109 +1,74 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { useCart } from '../../hooks/useCart';
-import Logo from '../Logo';
-import {
-  HomeIcon,
-  ShoppingBagIcon,
-  UserIcon,
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../../store/slices/authSlice';
+import { 
+  ShoppingCartIcon, 
+  UserIcon, 
+  ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  ShoppingCartIcon
+  HomeIcon,
+  ShoppingBagIcon
 } from '@heroicons/react/24/outline';
 
 const Header = () => {
-  const { user, logout } = useAuth();
-  const { cartItems, itemCount } = useCart();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { items } = useSelector((state) => state.cart);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [badgeAnimation, setBadgeAnimation] = useState(false);
 
-  // Trigger animation when itemCount changes
-  useEffect(() => {
-    setBadgeAnimation(true);
-    const timer = setTimeout(() => setBadgeAnimation(false), 1000);
-    return () => clearTimeout(timer);
-  }, [itemCount]);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/login');
   };
 
   const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'Menu', href: '/menu' },
-    {
-      name: 'Cart',
-      href: '/cart',
-      icon: ShoppingCartIcon,
-      badge: itemCount > 0 ? itemCount : null,
-    },
-    {
-      name: user ? 'Profile' : 'Login',
-      href: user ? '/profile' : '/login',
-      icon: UserIcon,
-    },
+    { name: 'Home', href: '/', icon: HomeIcon },
+    { name: 'Menu', href: '/menu', icon: ShoppingBagIcon },
+    { name: 'Cart', href: '/cart', icon: ShoppingCartIcon, badge: items.length },
+    { name: user ? 'Admin' : 'Login', href: user ? '/admin' : '/login', icon: UserIcon }
   ];
 
   return (
-    <header className="bg-white shadow-sm">
-      <style jsx>{`
-        @keyframes badgeBounce {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.2); }
-        }
-        .badge-animate {
-          animation: badgeBounce 0.5s ease-in-out;
-        }
-      `}</style>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="bg-white shadow-lg fixed top-0 left-0 right-0 z-50">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <Logo size="sm" />
-          </Link>
+          <div className="flex items-center">
+            <Link to="/" className="text-2xl font-bold text-primary">
+              Food Order
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-8">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
-                className="flex items-center text-base font-medium text-gray-700 hover:text-primary relative"
+                className="flex items-center text-gray-700 hover:text-primary transition-colors"
               >
-                {item.icon ? (
-                  <div className="relative">
-                    <item.icon className="h-6 w-6" />
-                    {item.badge && (
-                      <span 
-                        className={`absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center transition-all duration-300 ${
-                          badgeAnimation ? 'badge-animate' : ''
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  item.name
+                <item.icon className="h-6 w-6" />
+                <span className="ml-2">{item.name}</span>
+                {item.badge > 0 && (
+                  <span className="ml-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {item.badge}
+                  </span>
                 )}
               </Link>
             ))}
             {user && (
               <button
                 onClick={handleLogout}
-                className="text-base font-medium text-gray-700 hover:text-primary"
+                className="flex items-center text-gray-700 hover:text-primary transition-colors"
               >
-                Logout
+                <ArrowRightOnRectangleIcon className="h-6 w-6" />
+                <span className="ml-2">Logout</span>
               </button>
             )}
-          </nav>
+          </div>
 
           {/* Mobile menu button */}
           <div className="md:hidden">
@@ -119,52 +84,43 @@ const Header = () => {
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Navigation */}
-      {isMenuOpen && (
-        <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="flex items-center text-base font-medium text-gray-700 hover:text-primary relative py-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item.icon ? (
-                  <div className="flex items-center">
-                    <item.icon className="h-6 w-6 mr-2" />
-                    {item.name}
-                    {item.badge && (
-                      <span 
-                        className={`ml-2 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center transition-all duration-300 ${
-                          badgeAnimation ? 'badge-animate' : ''
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  item.name
-                )}
-              </Link>
-            ))}
-            {user && (
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full text-left text-base font-medium text-gray-700 hover:text-primary py-2"
-              >
-                Logout
-              </button>
-            )}
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="flex items-center px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-md"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <item.icon className="h-6 w-6" />
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              ))}
+              {user && (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center w-full px-3 py-2 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-md"
+                >
+                  <ArrowRightOnRectangleIcon className="h-6 w-6" />
+                  <span className="ml-3">Logout</span>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </nav>
     </header>
   );
 };

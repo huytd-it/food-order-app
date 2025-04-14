@@ -1,70 +1,76 @@
-# Getting Started with Create React App
+# Food Order App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Ứng dụng đặt món ăn trực tuyến với các tính năng:
+- Xem danh sách món ăn
+- Thêm món vào giỏ hàng
+- Tùy chọn kích thước và toppings
+- Thanh toán
 
-## Available Scripts
+## Cấu trúc MenuItem
 
-In the project directory, you can run:
+Mỗi món ăn trong menu có cấu trúc như sau:
 
-### `npm start`
+```javascript
+{
+  id: string,              // ID duy nhất của món ăn
+  name: string,            // Tên món ăn
+  description: string,     // Mô tả món ăn
+  price: number,          // Giá cơ bản (VND)
+  image: string,          // URL hình ảnh
+  category: string,       // Danh mục món ăn
+  rating: number,         // Đánh giá (1-5)
+  isPopular: boolean,     // Có phải món phổ biến không
+  size: {                 // Các tùy chọn kích thước
+    id: string,           // ID kích thước
+    name: string,         // Tên kích thước
+    price: number         // Giá thêm (VND)
+  },
+  toppings: [{           // Các tùy chọn toppings
+    id: string,          // ID topping
+    name: string,        // Tên topping
+    price: number        // Giá thêm (VND)
+  }]
+}
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Ví dụ về giá tiền
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Giá cơ bản của món ăn: 50,000đ - 150,000đ
+- Giá thêm cho kích thước:
+  - Nhỏ: +0đ
+  - Vừa: +10,000đ
+  - Lớn: +20,000đ
+- Giá thêm cho toppings: +5,000đ - 15,000đ mỗi topping
 
-### `npm test`
+## Cách sử dụng
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. Cài đặt dependencies:
+```bash
+npm install
+```
 
-### `npm run build`
+2. Chạy ứng dụng:
+```bash
+npm start
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. Populate dữ liệu menu:
+```bash
+node src/scripts/populateMenu.js
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Tính năng
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Xem danh sách món ăn theo danh mục
+- Thêm món vào giỏ hàng
+- Tùy chọn kích thước và toppings
+- Xem giỏ hàng và tổng tiền
+- Thanh toán đơn hàng
 
-### `npm run eject`
+## Công nghệ sử dụng
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- React
+- Redux Toolkit
+- Firebase
+- Tailwind CSS
+- Heroicons

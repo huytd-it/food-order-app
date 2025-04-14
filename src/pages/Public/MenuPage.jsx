@@ -1,211 +1,197 @@
 import React, { useState, useEffect } from 'react';
-import { useCart } from '../../hooks/useCart';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { 
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  ArrowUpIcon,
-  ArrowDownIcon
-} from '@heroicons/react/24/outline';
-import AddToCartButton from '../../components/Cart/AddToCartButton';
+import ProductCard from '../../components/Product/ProductCard';
+import { MagnifyingGlassIcon, FunnelIcon, ChevronUpDownIcon } from '@heroicons/react/24/outline';
 
 const MenuPage = () => {
   const [menuItems, setMenuItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredItems, setFilteredItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
-  const { addToCart } = useCart();
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const categories = [
+    { id: 'all', name: 'All Items' },
+    { id: 'cha-nem-tre', name: 'Chả Nem Tré' },
+    { id: 'cha-nem', name: 'Chả Nem' },
+    { id: 'cha-nem-chay', name: 'Chả Nem Chay' },
+  ];
+
+  const sortOptions = [
+    { id: 'name', name: 'Name' },
+    { id: 'price', name: 'Price' },
+    { id: 'rating', name: 'Rating' },
+  ];
 
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
-        setLoading(true);
-        let q = query(collection(db, 'menus'));
-
-        // Apply category filter
-        if (selectedCategory !== 'all') {
-          q = query(q, where('category', '==', selectedCategory));
-        }
-
-        // Apply sorting
-        if (sortBy === 'name') {
-          q = query(q, orderBy('name', sortOrder));
-        } else if (sortBy === 'price') {
-          q = query(q, orderBy('price', sortOrder));
-        } else if (sortBy === 'rating') {
-          q = query(q, orderBy('rating', sortOrder));
-        }
-
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(collection(db, 'menus'));
         const items = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         setMenuItems(items);
+        setFilteredItems(items);
+        setIsLoading(false);
       } catch (error) {
         console.error('Error fetching menu items:', error);
-      } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     fetchMenuItems();
-  }, [selectedCategory, sortBy, sortOrder]);
+  }, []);
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  useEffect(() => {
+    let filtered = [...menuItems];
 
-  const filteredItems = menuItems.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const categories = ['all', ...new Set(menuItems.map(item => item.category))];
-
-  const handleSort = (field) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
+
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortBy === 'name') {
+        return sortOrder === 'asc'
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      } else if (sortBy === 'price') {
+        return sortOrder === 'asc'
+          ? a.price - b.price
+          : b.price - a.price;
+      } else if (sortBy === 'rating') {
+        return sortOrder === 'asc'
+          ? a.rating - b.rating
+          : b.rating - a.rating;
+      }
+      return 0;
+    });
+
+    setFilteredItems(filtered);
+  }, [menuItems, searchTerm, sortBy, sortOrder, selectedCategory]);
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Our Menu</h1>
-          <p className="mt-2 text-lg text-gray-600">
-            Discover our delicious selection of dishes
-          </p>
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Menu</h1>
+          <p className="text-lg text-gray-600">Discover our delicious Vietnamese spring rolls</p>
         </div>
 
         {/* Search and Filter Section */}
-        <div className="mb-8 space-y-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search menu items..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
-          </div>
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            {/* Search Bar */}
+            <div className="flex-1 w-full">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search menu items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                />
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              </div>
+            </div>
 
-          <div className="flex flex-wrap gap-2">
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  selectedCategory === category
-                    ? 'bg-primary text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
+            {/* Category Filter */}
+            <div className="w-full md:w-auto">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full md:w-48 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
               >
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </button>
-            ))}
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort Button */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+            >
+              <FunnelIcon className="h-5 w-5" />
+              <span>Filters</span>
+            </button>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Sort by:</span>
-            <button
-              onClick={() => handleSort('name')}
-              className={`flex items-center space-x-1 text-sm ${
-                sortBy === 'name' ? 'text-primary font-medium' : 'text-gray-600'
-              }`}
-            >
-              <span>Name</span>
-              {sortBy === 'name' && (
-                sortOrder === 'asc' ? <ArrowUpIcon className="h-4 w-4" /> : <ArrowDownIcon className="h-4 w-4" />
-              )}
-            </button>
-            <button
-              onClick={() => handleSort('price')}
-              className={`flex items-center space-x-1 text-sm ${
-                sortBy === 'price' ? 'text-primary font-medium' : 'text-gray-600'
-              }`}
-            >
-              <span>Price</span>
-              {sortBy === 'price' && (
-                sortOrder === 'asc' ? <ArrowUpIcon className="h-4 w-4" /> : <ArrowDownIcon className="h-4 w-4" />
-              )}
-            </button>
-            <button
-              onClick={() => handleSort('rating')}
-              className={`flex items-center space-x-1 text-sm ${
-                sortBy === 'rating' ? 'text-primary font-medium' : 'text-gray-600'
-              }`}
-            >
-              <span>Rating</span>
-              {sortBy === 'rating' && (
-                sortOrder === 'asc' ? <ArrowUpIcon className="h-4 w-4" /> : <ArrowDownIcon className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Menu Items Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map(item => (
-            <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-full h-48 object-cover"
-              />
-              <div className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                    <p className="text-sm text-gray-500">{item.category}</p>
+          {/* Advanced Filters */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sort By
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="flex-1 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    >
+                      {sortOptions.map(option => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={toggleSortOrder}
+                      className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    >
+                      <ChevronUpDownIcon className="h-5 w-5 text-gray-600" />
+                    </button>
                   </div>
-                  <span className="text-lg font-bold text-primary">${item.price}</span>
-                </div>
-                <p className="mt-2 text-sm text-gray-600">{item.description}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="text-yellow-400">★</span>
-                    <span className="ml-1 text-sm text-gray-600">{item.rating}</span>
-                  </div>
-                  <AddToCartButton 
-                    item={{
-                      id: item.id,
-                      name: item.name,
-                      price: item.price,
-                      image: item.image,
-                      description: item.description,
-                      category: item.category
-                    }} 
-                  />
                 </div>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Menu Items Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredItems.map((item) => (
+            <ProductCard key={item.id} product={item} />
           ))}
         </div>
 
+        {/* Empty State */}
         {filteredItems.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-lg text-gray-600">No items found matching your search.</p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No items found</h3>
+            <p className="text-gray-600">Try adjusting your search or filters</p>
           </div>
         )}
       </div>
