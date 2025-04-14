@@ -1,113 +1,126 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../../hooks/useCart';
-import { useAuth } from '../../hooks/useAuth';
-import { 
-  TrashIcon, 
-  PlusIcon, 
-  MinusIcon,
-  ArrowLeftIcon,
-  ExclamationTriangleIcon
-} from '@heroicons/react/24/outline';
+import { useSelector, useDispatch } from 'react-redux';
+import { removeItem, clearCart, updateQuantity, updateItem } from '../../store/slices/cartSlice';
+import { TrashIcon } from '@heroicons/react/24/outline';
+import { sizeOptions, toppingOptions, badgeStyles } from '../../utils/constants';
 
 const CartPage = () => {
-  const { 
-    cartItems, 
-    total, 
-    removeFromCart, 
-    updateQuantity, 
-    clearCart,
-    isLoading: cartLoading,
-    error: cartError
-  } = useCart();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
+  const { items, totalQuantity, totalAmount } = useSelector((state) => state.cart);
+  const [selectedSizes, setSelectedSizes] = useState({});
+  const [selectedToppings, setSelectedToppings] = useState({});
 
+  // Load saved preferences from localStorage
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleQuantityChange = async (itemId, newQuantity) => {
-    try {
-      setError(null);
-      if (newQuantity < 1) {
-        await removeFromCart(itemId);
-      } else {
-        await updateQuantity(itemId, newQuantity);
+    const savedPreferences = {};
+    items.forEach(item => {
+      const preferences = localStorage.getItem(`preferences_${item.id}`);
+      if (preferences) {
+        const { size, toppings } = JSON.parse(preferences);
+        savedPreferences[item.id] = { size, toppings };
       }
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      setError(error.message);
+    });
+    setSelectedSizes(savedPreferences);
+    setSelectedToppings(savedPreferences);
+  }, [items]);
+
+  const handleRemoveItem = (itemId) => {
+    dispatch(removeItem(itemId));
+  };
+
+  const handleClearCart = () => {
+    dispatch(clearCart());
+  };
+
+  const handleQuantityChange = (itemId, newQuantity) => {
+    if (newQuantity > 0) {
+      dispatch(updateQuantity({ id: itemId, quantity: newQuantity }));
     }
   };
 
-  const handleCheckout = () => {
-    if (!user) {
-      navigate('/login', { state: { from: '/cart' } });
-      return;
-    }
-    setIsCheckingOut(true);
-    setTimeout(() => {
-      clearCart();
-      setIsCheckingOut(false);
-      navigate('/checkout/success');
-    }, 2000);
+  const handleSizeChange = (itemId, size) => {
+    setSelectedSizes(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], size }
+    }));
+    
+    // Calculate new total price
+    const item = items.find(i => i.id === itemId);
+    const sizePrice = sizeOptions.find(s => s.id === size)?.price || 0;
+    const toppingsPrice = Object.entries(selectedToppings[itemId]?.toppings || {})
+      .filter(([_, selected]) => selected)
+      .reduce((total, [toppingId]) => {
+        const topping = toppingOptions.find(t => t.id === toppingId);
+        return total + (topping?.price || 0);
+      }, 0);
+
+    const totalPrice = item.price + sizePrice + toppingsPrice;
+
+    dispatch(updateItem({
+      id: itemId,
+      size,
+      totalPrice
+    }));
+
+    // Save to localStorage
+    const preferences = {
+      size,
+      toppings: selectedToppings[itemId]?.toppings || {}
+    };
+    localStorage.setItem(`preferences_${itemId}`, JSON.stringify(preferences));
   };
 
-  if (isLoading || cartLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleToppingChange = (itemId, topping) => {
+    setSelectedToppings(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        toppings: {
+          ...prev[itemId]?.toppings,
+          [topping]: !prev[itemId]?.toppings?.[topping]
+        }
+      }
+    }));
 
-  if (cartError) {
+    // Calculate new total price
+    const item = items.find(i => i.id === itemId);
+    const sizePrice = sizeOptions.find(s => s.id === selectedSizes[itemId]?.size)?.price || 0;
+    const newToppings = {
+      ...selectedToppings[itemId]?.toppings,
+      [topping]: !selectedToppings[itemId]?.toppings?.[topping]
+    };
+    const toppingsPrice = Object.entries(newToppings)
+      .filter(([_, selected]) => selected)
+      .reduce((total, [toppingId]) => {
+        const topping = toppingOptions.find(t => t.id === toppingId);
+        return total + (topping?.price || 0);
+      }, 0);
+
+    const totalPrice = item.price + sizePrice + toppingsPrice;
+
+    dispatch(updateItem({
+      id: itemId,
+      toppings: newToppings,
+      totalPrice
+    }));
+
+    // Save to localStorage
+    const preferences = {
+      size: selectedSizes[itemId]?.size,
+      toppings: newToppings
+    };
+    localStorage.setItem(`preferences_${itemId}`, JSON.stringify(preferences));
+  };
+
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-500" />
-            <h2 className="mt-2 text-3xl font-bold text-gray-900">Error Loading Cart</h2>
-            <p className="mt-2 text-lg text-gray-600">{cartError}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!cartItems || cartItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Your Cart is Empty</h2>
-            <p className="text-lg text-gray-600 mb-8">
-              Looks like you haven't added any items to your cart yet.
+            <h1 className="text-3xl font-bold text-gray-900">Giỏ hàng của bạn đang trống</h1>
+            <p className="mt-2 text-lg text-gray-600">
+              Bạn chưa thêm sản phẩm nào vào giỏ hàng.
             </p>
-            <Link
-              to="/menu"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-primary-dark"
-            >
-              Browse Menu
-            </Link>
           </div>
         </div>
       </div>
@@ -117,102 +130,117 @@ const CartPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeftIcon className="h-5 w-5 mr-2" />
-            Back to Menu
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            <p>{error}</p>
-          </div>
-        )}
-
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="px-4 py-5 sm:px-6">
-            <h2 className="text-2xl font-bold text-gray-900">Shopping Cart</h2>
-          </div>
-
-          <div className="border-t border-gray-200">
-            <ul className="divide-y divide-gray-200">
-              {cartItems.map((item) => (
-                <li key={item.id} className="px-4 py-4 sm:px-6">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="p-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">Giỏ hàng</h1>
+            
+            {/* Cart Items */}
+            <div className="space-y-6">
+              {items.map((item) => (
+                <div key={item.id} className="border-b border-gray-200 pb-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center">
+                    <div className="flex items-center space-x-4">
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="h-16 w-16 rounded-md object-cover"
+                        className="h-20 w-20 object-cover rounded-lg"
                       />
-                      <div className="ml-4">
-                        <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
                         <p className="text-sm text-gray-500">{item.description}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                      <div className="flex items-center border rounded-md">
+                      {/* Quantity Control */}
+                      <div className="flex items-center border rounded-lg">
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                          className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={item.quantity <= 1}
+                          className="px-3 py-1 text-gray-600 hover:text-primary transition-colors duration-300"
                         >
-                          <MinusIcon className="h-4 w-4" />
+                          -
                         </button>
-                        <span className="px-4 py-2 text-gray-900">{item.quantity}</span>
+                        <span className="px-3 py-1 text-gray-900">{item.quantity}</span>
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          className="p-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1 text-gray-600 hover:text-primary transition-colors duration-300"
                         >
-                          <PlusIcon className="h-4 w-4" />
+                          +
                         </button>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-semibold text-gray-900">
-                          ${(item.price * item.quantity).toFixed(2)}
-                        </p>
-                        <p className="text-sm text-gray-500">${item.price} each</p>
-                      </div>
+                      <span className="text-lg font-semibold text-primary">
+                        {(item.totalPrice * item.quantity).toLocaleString('vi-VN')}đ
+                      </span>
                       <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="text-gray-400 hover:text-red-500"
+                        onClick={() => handleRemoveItem(item.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors duration-300"
                       >
                         <TrashIcon className="h-5 w-5" />
                       </button>
                     </div>
                   </div>
-                </li>
-              ))}
-            </ul>
-          </div>
 
-          <div className="px-4 py-5 sm:px-6 bg-gray-50">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Order Summary</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Total</p>
-                <p className="text-2xl font-bold text-gray-900">${total.toFixed(2)}</p>
-              </div>
+                  {/* Size Selection */}
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Kích thước</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {sizeOptions.map((size) => (
+                        <button
+                          key={size.id}
+                          onClick={() => handleSizeChange(item.id, size.id)}
+                          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
+                            selectedSizes[item.id]?.size === size.id
+                              ? 'bg-primary text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {size.name} (+{size.price.toLocaleString('vi-VN')}đ)
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Toppings Selection */}
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Toppings</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {toppingOptions.map((topping) => (
+                        <button
+                          key={topping.id}
+                          onClick={() => handleToppingChange(item.id, topping.id)}
+                          className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
+                            selectedToppings[item.id]?.toppings?.[topping.id]
+                              ? 'bg-primary text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {topping.name} (+{topping.price.toLocaleString('vi-VN')}đ)
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="mt-6">
-              <button
-                onClick={handleCheckout}
-                disabled={isCheckingOut}
-                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
-                  isCheckingOut ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
-              </button>
+
+            {/* Cart Summary */}
+            <div className="mt-8 border-t border-gray-200 pt-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Tổng số sản phẩm: {totalQuantity}</h3>
+                  <p className="text-sm text-gray-500">Tổng tiền: {totalAmount.toLocaleString('vi-VN')}đ</p>
+                </div>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={handleClearCart}
+                    className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 transition-colors duration-300"
+                  >
+                    Xóa giỏ hàng
+                  </button>
+                  <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors duration-300">
+                    Thanh toán
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

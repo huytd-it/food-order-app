@@ -10,31 +10,26 @@ import foodReducer from './slices/foodSlice';
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth', 'cart'] // Only persist auth and cart
+  whitelist: ['auth'] // Only persist auth
 };
 
 // Create persisted reducers
 const persistedAuthReducer = persistReducer(persistConfig, authReducer);
-const persistedCartReducer = persistReducer(persistConfig, cartReducer);
 
 // Configure the store
-const store = configureStore({
+export const store = configureStore({
   reducer: {
     auth: persistedAuthReducer,
-    cart: persistedCartReducer,
+    cart: cartReducer,
     user: userReducer,
     food: foodReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE']
-      }
-    })
+      serializableCheck: false,
+    }),
 });
 
-// Create the persistor
-const persistor = persistStore(store);
+export const persistor = persistStore(store);
 
-export { store, persistor };
 export default store; 
