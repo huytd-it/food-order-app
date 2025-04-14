@@ -1,35 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { addItem } from '../../store/slices/cartSlice';
-import { ShoppingCartIcon } from '@heroicons/react/24/outline';
-import { sizeOptions, toppingOptions, badgeStyles } from '../../utils/constants';
+import { sizeOptions, toppingOptions } from '../../utils/constants';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, sizeOptions, toppingOptions }) => {
   const dispatch = useDispatch();
+  const buttonRef = useRef(null);
   const [isAdding, setIsAdding] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState('medium');
-  const [selectedToppings, setSelectedToppings] = useState({});
-  const [hoveredTopping, setHoveredTopping] = useState(null);
-  const buttonRef = useRef(null);
-
-  // Load preferences from localStorage
-  useEffect(() => {
-    const savedPreferences = localStorage.getItem(`preferences_${product.id}`);
-    if (savedPreferences) {
-      const { size, toppings } = JSON.parse(savedPreferences);
-      setSelectedSize(size);
-      setSelectedToppings(toppings);
-    }
-  }, [product.id]);
-
-  // Save preferences to localStorage
-  const savePreferences = () => {
-    localStorage.setItem(`preferences_${product.id}`, JSON.stringify({
-      size: selectedSize,
-      toppings: selectedToppings
-    }));
-  };
+  const [selectedSize, setSelectedSize] = useState(sizeOptions[0]);
+  const [selectedToppings, setSelectedToppings] = useState([]);
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleAddToCart = () => {
     setIsAdding(true);
@@ -44,52 +25,35 @@ const ProductCard = ({ product }) => {
       
       const flyingElement = document.createElement('div');
       flyingElement.className = 'flying-element';
-      document.body.appendChild(flyingElement);
-      
-      // Set initial position
       flyingElement.style.left = `${buttonRect.left + buttonRect.width / 2}px`;
       flyingElement.style.top = `${buttonRect.top + buttonRect.height / 2}px`;
+      document.body.appendChild(flyingElement);
       
-      // Animate to cart
+      // Animate
       setTimeout(() => {
-        flyingElement.style.left = `${cartRect.left + cartRect.width / 2}px`;
-        flyingElement.style.top = `${cartRect.top + cartRect.height / 2}px`;
-        flyingElement.style.transform = 'scale(0)';
+        flyingElement.style.transform = `translate(${cartRect.left - buttonRect.left}px, ${cartRect.top - buttonRect.top}px)`;
         flyingElement.style.opacity = '0';
       }, 10);
       
       // Remove element after animation
       setTimeout(() => {
         document.body.removeChild(flyingElement);
+        setIsAdding(false);
       }, 1000);
     }
 
-    // Calculate total price with size and toppings
-    const sizePrice = sizeOptions.find(size => size.id === selectedSize)?.price || 0;
-    const toppingsPrice = Object.entries(selectedToppings)
-      .filter(([_, selected]) => selected)
-      .reduce((total, [toppingId]) => {
-        const topping = toppingOptions.find(t => t.id === toppingId);
-        return total + (topping?.price || 0);
-      }, 0);
-
-    const totalPrice = product.price + sizePrice + toppingsPrice;
+    // Calculate total price
+    const toppingsPrice = selectedToppings.reduce((total, topping) => total + topping.price, 0);
+    const totalPrice = (product.price + selectedSize.price + toppingsPrice) * quantity;
 
     // Add to cart
     dispatch(addItem({
       ...product,
-      quantity,
       size: selectedSize,
       toppings: selectedToppings,
-      totalPrice
+      totalPrice,
+      quantity
     }));
-
-    // Save preferences
-    savePreferences();
-
-    setTimeout(() => {
-      setIsAdding(false);
-    }, 1000);
   };
 
   const handleQuantityChange = (newQuantity) => {
@@ -98,20 +62,23 @@ const ProductCard = ({ product }) => {
     }
   };
 
-  const handleToppingChange = (toppingId) => {
-    setSelectedToppings(prev => ({
-      ...prev,
-      [toppingId]: !prev[toppingId]
-    }));
+  const handleSizeChange = (size) => {
+    setSelectedSize(size);
   };
 
-  const handleSizeChange = (sizeId) => {
-    setSelectedSize(sizeId);
-    savePreferences();
+  const handleToppingChange = (topping) => {
+    setSelectedToppings(prev => {
+      const isSelected = prev.some(t => t.id === topping.id);
+      if (isSelected) {
+        return prev.filter(t => t.id !== topping.id);
+      } else {
+        return [...prev, topping];
+      }
+    });
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <div className="relative">
         <img
           src={product.image}
@@ -119,109 +86,100 @@ const ProductCard = ({ product }) => {
           className="w-full h-48 object-cover"
         />
         {product.isPopular && (
-          <span className={`absolute top-2 left-2 text-xs font-semibold px-2 py-1 rounded-full ${badgeStyles.popular}`}>
-            Popular
-          </span>
+          <div className="absolute top-2 right-2 bg-yellow-400 text-white px-2 py-1 rounded-full text-xs font-semibold">
+            Phổ biến
+          </div>
         )}
       </div>
-      
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.name}</h3>
-        <p className="text-sm text-gray-600 mb-4">{product.description}</p>
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+          <span className="text-lg font-bold text-primary">
+            {product.price.toLocaleString('vi-VN')}đ
+          </span>
+        </div>
+        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
         
-        {/* Size Selection */}
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Size</h4>
-          <div className="flex flex-wrap gap-2">
-            {sizeOptions.map((size) => (
-              <button
-                key={size.id}
-                onClick={() => handleSizeChange(size.id)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-                  selectedSize === size.id
-                    ? badgeStyles.selected
-                    : badgeStyles.default
-                }`}
-              >
-                {size.name} (+${size.price})
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Toppings Selection */}
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Toppings</h4>
-          <div className="flex flex-wrap gap-2">
-            {toppingOptions.map((topping) => (
-              <div key={topping.id} className="relative group">
-                <button
-                  onClick={() => handleToppingChange(topping.id)}
-                  onMouseEnter={() => setHoveredTopping(topping.id)}
-                  onMouseLeave={() => setHoveredTopping(null)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-                    selectedToppings[topping.id]
-                      ? badgeStyles.selected
-                      : badgeStyles.default
-                  }`}
-                >
-                  {topping.name} (+${topping.price})
-                </button>
-                {hoveredTopping === topping.id && (
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    Click to {selectedToppings[topping.id] ? 'remove' : 'add'} this topping
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => handleQuantityChange(quantity - 1)}
-              className="px-2 py-1 border rounded-lg hover:bg-gray-100 transition-colors duration-300"
+              className="px-2 py-1 border rounded-lg hover:bg-gray-100"
             >
               -
             </button>
-            <span className="px-2 py-1">{quantity}</span>
+            <span>{quantity}</span>
             <button
               onClick={() => handleQuantityChange(quantity + 1)}
-              className="px-2 py-1 border rounded-lg hover:bg-gray-100 transition-colors duration-300"
+              className="px-2 py-1 border rounded-lg hover:bg-gray-100"
             >
               +
             </button>
           </div>
-          
-          <div className="flex items-center space-x-4">
-            <span className="text-lg font-semibold text-primary">
-              ${product.price.toFixed(2)}
-            </span>
-            <button
-              ref={buttonRef}
-              onClick={handleAddToCart}
-              disabled={isAdding}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 ${
-                isAdding
-                  ? 'bg-green-500 text-white'
-                  : 'bg-primary text-white hover:bg-primary-dark'
-              }`}
-            >
-              {isAdding ? (
-                <>
-                  <ShoppingCartIcon className="h-5 w-5" />
-                  <span>Added!</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingCartIcon className="h-5 w-5" />
-                  <span>Add to Cart</span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-sm text-gray-500 hover:text-primary"
+          >
+            {showDetails ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+          </button>
         </div>
+
+        {showDetails && (
+          <div className="mt-4 pt-4 border-t">
+            {/* Size Selection */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Kích thước</h4>
+              <div className="flex gap-2">
+                {sizeOptions.map(size => (
+                  <button
+                    key={size.id}
+                    onClick={() => handleSizeChange(size)}
+                    className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                      selectedSize.id === size.id
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {size.name} {size.price > 0 ? `(+${size.price.toLocaleString('vi-VN')}đ)` : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Toppings Selection */}
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Thêm vào</h4>
+              <div className="flex flex-wrap gap-2">
+                {toppingOptions.map(topping => (
+                  <button
+                    key={topping.id}
+                    onClick={() => handleToppingChange(topping)}
+                    className={`px-3 py-1 rounded-full text-sm transition-all duration-300 ${
+                      selectedToppings.some(t => t.id === topping.id)
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {topping.name} (+{topping.price.toLocaleString('vi-VN')}đ)
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <button
+          ref={buttonRef}
+          onClick={handleAddToCart}
+          disabled={isAdding}
+          className={`w-full mt-4 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+            isAdding
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-primary text-white hover:bg-primary-dark'
+          }`}
+        >
+          {isAdding ? 'Đang thêm...' : 'Thêm vào giỏ'}
+        </button>
       </div>
 
       <style jsx>{`
@@ -232,8 +190,8 @@ const ProductCard = ({ product }) => {
           background-color: #EF4444;
           border-radius: 50%;
           pointer-events: none;
+          transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
           z-index: 9999;
-          transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}</style>
     </div>

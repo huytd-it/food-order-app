@@ -6,6 +6,129 @@
 - Tùy chọn kích thước và toppings
 - Thanh toán
 
+## Cấu trúc dữ liệu
+
+### MenuItem
+```typescript
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+  rating: number;
+  isPopular: boolean;
+}
+```
+
+### CartItem
+```typescript
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  size: {
+    id: string;
+    name: string;
+    price: number;
+  };
+  toppings: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }>;
+  totalPrice: number;
+}
+```
+
+### Order
+```typescript
+interface Order {
+  id: string;
+  userId: string | null;
+  name: string;
+  phone: string;
+  address: string;
+  note: string;
+  paymentMethod: 'cash' | 'bank';
+  items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    size: {
+      id: string;
+      name: string;
+      price: number;
+    };
+    toppings: Array<{
+      id: string;
+      name: string;
+      price: number;
+    }>;
+    totalPrice: number;
+  }>;
+  totalAmount: number;
+  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
+
+### User
+```typescript
+interface User {
+  uid: string;
+  email: string;
+  displayName: string;
+  phoneNumber: string;
+  address: string;
+  photoURL: string;
+  role: 'user' | 'admin';
+}
+```
+
+## Redux Store Structure
+
+```typescript
+interface RootState {
+  cart: {
+    items: CartItem[];
+    totalAmount: number;
+  };
+  auth: {
+    user: User | null;
+    loading: boolean;
+    error: string | null;
+  };
+}
+```
+
+## Features
+- Đặt món ăn trực tuyến
+- Quản lý giỏ hàng
+- Thanh toán và theo dõi đơn hàng
+- Đăng nhập/Đăng ký tài khoản
+- Quản lý thông tin cá nhân
+- Xem lịch sử đơn hàng
+
+## Technologies
+- React
+- Redux Toolkit
+- Firebase (Authentication, Firestore, Storage)
+- Tailwind CSS
+- React Router
+- React Hook Form
+- React Icons
+
+## Getting Started
+1. Clone repository
+2. Install dependencies: `npm install`
+3. Create `.env` file with Firebase config
+4. Start development server: `npm run dev`
+
 ## Cấu trúc MenuItem
 
 Mỗi món ăn trong menu có cấu trúc như sau:
