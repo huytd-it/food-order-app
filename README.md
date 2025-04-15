@@ -1,70 +1,199 @@
-# Getting Started with Create React App
+# Food Order App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Ứng dụng đặt món ăn trực tuyến với các tính năng:
+- Xem danh sách món ăn
+- Thêm món vào giỏ hàng
+- Tùy chọn kích thước và toppings
+- Thanh toán
 
-## Available Scripts
+## Cấu trúc dữ liệu
 
-In the project directory, you can run:
+### MenuItem
+```typescript
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+  rating: number;
+  isPopular: boolean;
+}
+```
 
-### `npm start`
+### CartItem
+```typescript
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  size: {
+    id: string;
+    name: string;
+    price: number;
+  };
+  toppings: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }>;
+  totalPrice: number;
+}
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Order
+```typescript
+interface Order {
+  id: string;
+  userId: string | null;
+  name: string;
+  phone: string;
+  address: string;
+  note: string;
+  paymentMethod: 'cash' | 'bank';
+  items: Array<{
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    size: {
+      id: string;
+      name: string;
+      price: number;
+    };
+    toppings: Array<{
+      id: string;
+      name: string;
+      price: number;
+    }>;
+    totalPrice: number;
+  }>;
+  totalAmount: number;
+  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### User
+```typescript
+interface User {
+  uid: string;
+  email: string;
+  displayName: string;
+  phoneNumber: string;
+  address: string;
+  photoURL: string;
+  role: 'user' | 'admin';
+}
+```
 
-### `npm test`
+## Redux Store Structure
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```typescript
+interface RootState {
+  cart: {
+    items: CartItem[];
+    totalAmount: number;
+  };
+  auth: {
+    user: User | null;
+    loading: boolean;
+    error: string | null;
+  };
+}
+```
 
-### `npm run build`
+## Features
+- Đặt món ăn trực tuyến
+- Quản lý giỏ hàng
+- Thanh toán và theo dõi đơn hàng
+- Đăng nhập/Đăng ký tài khoản
+- Quản lý thông tin cá nhân
+- Xem lịch sử đơn hàng
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Technologies
+- React
+- Redux Toolkit
+- Firebase (Authentication, Firestore, Storage)
+- Tailwind CSS
+- React Router
+- React Hook Form
+- React Icons
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Getting Started
+1. Clone repository
+2. Install dependencies: `npm install`
+3. Create `.env` file with Firebase config
+4. Start development server: `npm run dev`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Cấu trúc MenuItem
 
-### `npm run eject`
+Mỗi món ăn trong menu có cấu trúc như sau:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```javascript
+{
+  id: string,              // ID duy nhất của món ăn
+  name: string,            // Tên món ăn
+  description: string,     // Mô tả món ăn
+  price: number,          // Giá cơ bản (VND)
+  image: string,          // URL hình ảnh
+  category: string,       // Danh mục món ăn
+  rating: number,         // Đánh giá (1-5)
+  isPopular: boolean,     // Có phải món phổ biến không
+  size: {                 // Các tùy chọn kích thước
+    id: string,           // ID kích thước
+    name: string,         // Tên kích thước
+    price: number         // Giá thêm (VND)
+  },
+  toppings: [{           // Các tùy chọn toppings
+    id: string,          // ID topping
+    name: string,        // Tên topping
+    price: number        // Giá thêm (VND)
+  }]
+}
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Ví dụ về giá tiền
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- Giá cơ bản của món ăn: 50,000đ - 150,000đ
+- Giá thêm cho kích thước:
+  - Nhỏ: +0đ
+  - Vừa: +10,000đ
+  - Lớn: +20,000đ
+- Giá thêm cho toppings: +5,000đ - 15,000đ mỗi topping
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Cách sử dụng
 
-## Learn More
+1. Cài đặt dependencies:
+```bash
+npm install
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+2. Chạy ứng dụng:
+```bash
+npm start
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+3. Populate dữ liệu menu:
+```bash
+node src/scripts/populateMenu.js
+```
 
-### Code Splitting
+## Tính năng
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- Xem danh sách món ăn theo danh mục
+- Thêm món vào giỏ hàng
+- Tùy chọn kích thước và toppings
+- Xem giỏ hàng và tổng tiền
+- Thanh toán đơn hàng
 
-### Analyzing the Bundle Size
+## Công nghệ sử dụng
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- React
+- Redux Toolkit
+- Firebase
+- Tailwind CSS
+- Heroicons

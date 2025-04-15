@@ -15,6 +15,8 @@ import TestFirebase from './components/TestFirebase';
 import TestRedux from './components/TestRedux';
 import TestAuth from './components/TestAuth';
 import TestLogin from './components/Test/TestLogin';
+import OrdersHistory from './pages/User/OrdersHistory';
+import Favorites from './pages/User/Favorites';
 import 'antd/dist/reset.css';
 import AdminRoutes from './routes/AdminRoutes';
 
@@ -31,6 +33,8 @@ const App = () => {
   const protectedRoutes = [
     { path: '/cart', element: <CartPage /> },
     { path: '/checkout', element: <CheckoutPage /> },
+    { path: '/orders', element: <OrdersHistory /> },
+    { path: '/favorites', element: <Favorites /> },
     { path: '/test-firebase', element: <TestFirebase /> },
     { path: '/test-redux', element: <TestRedux /> },
   ];
